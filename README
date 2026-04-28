@@ -1,0 +1,21 @@
+# 🚀 KanuorieTechLib
+
+Fullstack learning platform.
+
+## 🧩 Tech Stack
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Database: PostgreSQL + Sequelize
+
+## 📦 Setup
+
+### Install all
+npm install
+cd backend && npm install
+cd ../frontend && npm install
+
+### Run full app
+npm run dev
+
+## 🌐 API Base URL
+http://localhost:5000/api

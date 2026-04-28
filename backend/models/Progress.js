@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
 
 const Progress = sequelize.define("Progress", {
-  progress: {
+  Progress: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
     validate: {

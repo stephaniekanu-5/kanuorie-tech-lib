@@ -5,7 +5,7 @@ const User = require("./User");
 const Book = require("./Book");
 const Course = require("./Course");
 const Notification = require("./Notification");
-const Progress = require("./progress");
+const Progress = require("./Progress");
 
 // Create db object
 const db = {};
