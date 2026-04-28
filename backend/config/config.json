@@ -1,9 +1,0 @@
-{
-  "development": {
-    "username": "stephanie",
-    "password": "783743",
-    "database": "kanuorie_tech",
-    "host": "127.0.0.1",
-    "dialect": "postgres"
-  }
-}
