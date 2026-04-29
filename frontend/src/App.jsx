@@ -14,7 +14,7 @@ import Register from "./pages/Register";
 import { useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
 import Admin from "./pages/Admin";
-import TermsOfService from "./pages/TermsofService";
+import TermsOfService from "./pages/TermsOfService.jsx";
 import { Toaster } from "react-hot-toast";
 
 function App() {
