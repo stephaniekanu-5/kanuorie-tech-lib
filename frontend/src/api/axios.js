@@ -4,16 +4,16 @@ const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL + "/api",
 });
 
-// 🔐 Attach token automatically
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token"); // ✅ FIXED KEY
-  
-console.log("TOKEN BEING SENT:", token);
+  const token = localStorage.getItem("token");
 
- if (token && config.url !== "/auth/register") {
+  console.log("TOKEN BEING SENT:", token);
+
+  // attach token only if it exists
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return config;
 });
 
