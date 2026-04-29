@@ -99,8 +99,9 @@ io.on("connection", (socket) => {
 /* ========================
    DEBUG 404 (FIXED)
 ======================== */
-app.use((req, res, next) => {
+app.use((req, res) => {
   console.log("⚠️ Route not found:", req.method, req.originalUrl);
+
   res.status(404).json({
     message: "Route not found",
     path: req.originalUrl,

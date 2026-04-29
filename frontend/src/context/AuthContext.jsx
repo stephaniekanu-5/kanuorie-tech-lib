@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
 
   const [notifications, setNotifications] = useState([]);
 
-  // ✅ UNREAD COUNT
   const unreadCount = notifications?.filter((n) => !n.isRead).length;
 
   /* ========================
@@ -62,10 +61,11 @@ export function AuthProvider({ children }) {
   }, [settings]);
 
   /* ========================
-     SOCKET: JOIN USER ROOM
+     SOCKET JOIN
   ======================== */
   useEffect(() => {
     if (user?.id) {
+      socket.connect(); // ensure connected
       socket.emit("join", user.id);
     }
   }, [user?.id]);
@@ -89,51 +89,40 @@ export function AuthProvider({ children }) {
   }, [user?.id]);
 
   /* ========================
-     SOCKET LISTENER (REAL-TIME)
+     SOCKET LISTENER
   ======================== */
-useEffect(() => {
-  const handleNewNotification = (notification) => {
-    setNotifications((prev) => {
-      const exists = prev.find((n) => n.id === notification.id);
-      if (exists) return prev;
-
-      return [notification, ...prev];
-    });
-
-    // 🔥 TOAST LOGIC (outside state update)
-    if (notification.type === "admin") {
-      toast("📢 Admin Message", {
-        description: notification.message,
+  useEffect(() => {
+    const handleNewNotification = (notification) => {
+      setNotifications((prev) => {
+        const exists = prev.find((n) => n.id === notification.id);
+        if (exists) return prev;
+        return [notification, ...prev];
       });
-    } 
-    else if (notification.type === "course") {
-      toast.success("🎓 New Course Assigned!");
-    } 
-    else {
-      toast.success(notification.title, {
-        description: notification.message,
-        style: {
-          background: "#1f2937",
-          color: "#fff",
-          borderRadius: "10px",
-          padding: "12px",
-        },
-      });
-    }
-  };
 
-  socket.on("notification", handleNewNotification);
+      if (notification.type === "admin") {
+        toast("📢 Admin Message", {
+          description: notification.message,
+        });
+      } else if (notification.type === "course") {
+        toast.success("🎓 New Course Assigned!");
+      } else {
+        toast.success(notification.title || "Notification", {
+          description: notification.message,
+        });
+      }
+    };
 
-  return () => {
-    socket.off("notification", handleNewNotification);
-  };
-}, []);
+    socket.on("notification", handleNewNotification);
+
+    return () => {
+      socket.off("notification", handleNewNotification);
+    };
+  }, []);
 
   /* ========================
-     AUTH FUNCTIONS
+     LOGIN
   ======================== */
   const login = (data) => {
-    // ✅ FIXED STORAGE KEYS
     localStorage.setItem("techlib-token", data.token);
     localStorage.setItem("techlib-user", JSON.stringify(data.user));
 
@@ -141,29 +130,25 @@ useEffect(() => {
     setToken(data.token);
   };
 
+  /* ========================
+     LOGOUT
+  ======================== */
   const logout = () => {
     setUser(null);
     setToken(null);
     setNotifications([]);
 
-    // ✅ clean storage
     localStorage.removeItem("techlib-user");
     localStorage.removeItem("techlib-token");
 
-    // ✅ disconnect socket (important)
     socket.disconnect();
   };
 
-  /* ========================
-     CONTEXT PROVIDER
-  ======================== */
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
         token,
-        setToken,
         login,
         logout,
         settings,
