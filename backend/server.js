@@ -25,10 +25,11 @@ const progressRoutes = require("./routes/progressRoutes");
 const app = express();
 
 /* ========================
-   MIDDLEWARE
+   CORS (FIXED)
 ======================== */
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://kanuorie-tech-lib-ne15.vercel.app",
 ];
 
@@ -38,7 +39,8 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        console.log("❌ Blocked CORS:", origin);
+        callback(null, false);
       }
     },
     credentials: true,
@@ -48,7 +50,7 @@ app.use(
 app.use(express.json());
 
 /* ========================
-   ROUTES
+   ROUTES (IMPORTANT)
 ======================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
@@ -67,13 +69,13 @@ app.get("/", (req, res) => {
 });
 
 /* ========================
-   SERVER + SOCKET.IO
+   SOCKET.IO
 ======================== */
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
@@ -95,10 +97,14 @@ io.on("connection", (socket) => {
 });
 
 /* ========================
-   404 HANDLER
+   DEBUG 404 (FIXED)
 ======================== */
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+app.use((req, res, next) => {
+  console.log("⚠️ Route not found:", req.method, req.originalUrl);
+  res.status(404).json({
+    message: "Route not found",
+    path: req.originalUrl,
+  });
 });
 
 /* ========================
