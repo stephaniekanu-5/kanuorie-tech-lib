@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL + "/api",
 });
 
 // 🔐 Attach token automatically
@@ -10,10 +10,10 @@ API.interceptors.request.use((config) => {
   
 console.log("TOKEN BEING SENT:", token);
 
-  if (token) {
+ if (token && config.url !== "/auth/register") {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
+  
   return config;
 });
 
