@@ -131,7 +131,7 @@ const handleRegister = async () => {
         <p className="text-sm text-center mt-4">
           Already have an account?{" "}
           <Link to="/login" className="text-white font-medium underline">
-            Login
+            Login 
           </Link>
         </p>
       </div>
