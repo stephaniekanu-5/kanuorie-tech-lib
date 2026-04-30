@@ -19,38 +19,69 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
-const handleRegister = async () => {
-  try {
-    setLoading(true);
+  // 🔥 VALIDATION (PRODUCTION SAFE)
+  const validateForm = () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      return "All fields are required";
+    }
+    if (formData.password.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+    if (!formData.role) {
+      return "Role is required";
+    }
+    return null;
+  };
 
-    await registerUser(formData);
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
 
-    const loginData = await loginUser({
-      email: formData.email,
-      password: formData.password,
-      role: formData.role,
-    });
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-    login(loginData);
-    navigate("/profile");
+    try {
+      setLoading(true);
 
-  } catch (err) {
-    setError(err.response?.data?.message || "Registration failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      // 1️⃣ Register user
+      await registerUser(formData);
+
+      // 2️⃣ Auto login
+      const loginData = await loginUser({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // 3️⃣ Save session
+      login(loginData);
+
+      // 4️⃣ Redirect
+      navigate("/profile");
+
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Registration failed. Try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-700">
-      <div className="backdrop-blur-lg bg-white/10 border border-white/20 p-8 rounded-2xl shadow-xl w-96 text-white">
-        
+      <form
+        onSubmit={handleRegister}
+        className="backdrop-blur-lg bg-white/10 border border-white/20 p-8 rounded-2xl shadow-xl w-96 text-white"
+      >
         <h1 className="text-2xl font-bold mb-6 text-center">
           Create Account
         </h1>
@@ -62,7 +93,7 @@ const handleRegister = async () => {
           placeholder="Full Name"
           value={formData.name}
           onChange={handleChange}
-          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white mb-4"
+          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 mb-4"
         />
 
         {/* Email */}
@@ -72,16 +103,19 @@ const handleRegister = async () => {
           placeholder="Email"
           value={formData.email}
           onChange={handleChange}
-          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white mb-4"
+          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 mb-4"
         />
+
+        {/* Role */}
         <input
-         type="text"
+          type="text"
           name="role"
-          placeholder="Role (e.g. Developer, Designer)"
+          placeholder="Role (e.g. Developer)"
           value={formData.role}
           onChange={handleChange}
-          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white mb-4"
+          className="w-full p-3 rounded-xl bg-white/20 border border-white/30 mb-4"
         />
+
         {/* Password */}
         <div className="relative mb-4">
           <input
@@ -90,23 +124,13 @@ const handleRegister = async () => {
             placeholder="Password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white pr-12"
-          />
-          <input
-            type="hidden"
-            name="confirmPassword"
-            value={formData.password}
-          />
-          <input
-            type="hidden"
-            name="username"
-            value={formData.email.split("@")[0]}
+            className="w-full p-3 rounded-xl bg-white/20 border border-white/30 pr-12"
           />
 
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/70"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -119,22 +143,22 @@ const handleRegister = async () => {
           </p>
         )}
 
-        {/* Register Button */}
+        {/* Submit */}
         <button
-          onClick={handleRegister}
+          type="submit"
           className="bg-white text-purple-700 w-full py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
         >
           {loading ? "Creating account..." : "Sign Up"}
         </button>
 
-        {/* Login Link */}
+        {/* Login */}
         <p className="text-sm text-center mt-4">
           Already have an account?{" "}
-          <Link to="/login" className="text-white font-medium underline">
-            Login 
+          <Link to="/login" className="underline font-medium">
+            Login
           </Link>
         </p>
-      </div>
+      </form>
     </div>
   );
 }

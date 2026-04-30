@@ -18,6 +18,7 @@ const userRoutes = require("./routes/userRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const progressRoutes = require("./routes/progressRoutes");
+const path = require("path");
 
 /* ========================
    APP INIT
@@ -47,6 +48,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "frontend/dist")));
 
 /* ========================
    ROUTES (IMPORTANT)
@@ -65,6 +67,10 @@ app.use("/api/progress", progressRoutes);
 ======================== */
 app.get("/", (req, res) => {
   res.send("API running...");
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });
 
 /* ========================
@@ -128,7 +134,7 @@ const startServer = async () => {
     await connectDB();
     console.log("📡 Database connected");
 
-    const { sequelize } = require("./models");
+const { sequelize } = require("./models");
 
     if (!sequelize) {
       throw new Error("Sequelize instance not found");

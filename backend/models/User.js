@@ -36,7 +36,9 @@ const User = sequelize.define(
       allowNull: false,
     },
   },
-  {
+  { 
+    tableName: "Users",
+    freezeTableName: true,
     timestamps: true, // ✅ IMPORTANT for Postgres apps
 
     hooks: {

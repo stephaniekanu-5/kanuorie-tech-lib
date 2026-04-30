@@ -8,6 +8,7 @@ export const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   const [settings, setSettings] = useState({
     darkMode: false,
@@ -16,10 +17,10 @@ export function AuthProvider({ children }) {
 
   const [notifications, setNotifications] = useState([]);
 
-  const unreadCount = notifications?.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   /* ========================
-     LOAD FROM LOCAL STORAGE
+     HYDRATE AUTH (FIXED)
   ======================== */
   useEffect(() => {
     const savedUser = localStorage.getItem("techlib-user");
@@ -29,6 +30,8 @@ export function AuthProvider({ children }) {
     if (savedUser) setUser(JSON.parse(savedUser));
     if (savedToken) setToken(savedToken);
     if (savedSettings) setSettings(JSON.parse(savedSettings));
+
+    setLoadingAuth(false);
   }, []);
 
   /* ========================
@@ -61,13 +64,17 @@ export function AuthProvider({ children }) {
   }, [settings]);
 
   /* ========================
-     SOCKET JOIN
+     SOCKET CONNECT (SAFE)
   ======================== */
   useEffect(() => {
-    if (user?.id) {
-      socket.connect(); // ensure connected
-      socket.emit("join", user.id);
-    }
+    if (!user?.id) return;
+
+    socket.connect();
+    socket.emit("join", user.id);
+
+    return () => {
+      socket.off("notification");
+    };
   }, [user?.id]);
 
   /* ========================
@@ -149,6 +156,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         token,
+        loadingAuth, // ✅ IMPORTANT FIX
         login,
         logout,
         settings,

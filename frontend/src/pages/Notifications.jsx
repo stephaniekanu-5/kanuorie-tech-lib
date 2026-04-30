@@ -2,29 +2,24 @@ import { useContext, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
 import API from "../api/axios";
-import { io } from "socket.io-client";
-
-// ✅ create ONE socket instance (outside component)
-const socket = io("http://localhost:5000", {
-  transports: ["websocket"],
-});
+import socket from "../socket"; // ✅ USE SHARED SOCKET
 
 export default function Notifications() {
   const {
     user,
     settings,
-    notifications,
+    notifications = [],
     setNotifications,
   } = useContext(AuthContext);
 
-  // ================= FETCH FROM BACKEND =================
+  /* ================= FETCH FROM BACKEND ================= */
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user?.id) return;
 
       try {
         const res = await API.get(`/notifications/${user.id}`);
-        setNotifications(res.data);
+        setNotifications(res.data || []);
       } catch (err) {
         console.error("Failed to fetch notifications", err);
       }
@@ -33,14 +28,19 @@ export default function Notifications() {
     fetchNotifications();
   }, [user?.id, setNotifications]);
 
-  // ================= REAL-TIME NOTIFICATIONS =================
+  /* ================= REAL-TIME NOTIFICATIONS ================= */
   useEffect(() => {
     if (!user?.id) return;
+
+    // ✅ ensure connection only when needed
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     socket.emit("join", user.id);
 
     const handleNotification = (newNotification) => {
-      setNotifications((prev) => {
+      setNotifications((prev = []) => {
         const exists = prev.find((n) => n.id === newNotification.id);
         if (exists) return prev;
 
@@ -55,23 +55,25 @@ export default function Notifications() {
     };
   }, [user?.id, setNotifications]);
 
-  // ================= MARK AS READ =================
+  /* ================= MARK AS READ ================= */
   const markAsRead = async (id) => {
     try {
       await API.put(`/notifications/${id}/read`);
 
-      const updated = notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
+      setNotifications((prev = []) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n
+        )
       );
-
-      setNotifications(updated);
     } catch (err) {
       console.error("Failed to mark as read", err);
     }
   };
 
-  // ================= CLEAR ALL =================
+  /* ================= CLEAR ALL ================= */
   const clearAll = async () => {
+    if (!user?.id) return;
+
     const confirmClear = window.confirm("Clear all notifications?");
     if (!confirmClear) return;
 
@@ -83,12 +85,12 @@ export default function Notifications() {
     }
   };
 
-  // ================= UNREAD COUNT =================
-  const unreadCount = notifications?.filter((n) => !n.isRead).length;
+  /* ================= UNREAD COUNT ================= */
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <div
-      className={`min-h-screen transition-all ${
+      className={`min-h-screen ${
         settings?.darkMode ? "bg-gray-900 text-white" : "bg-gray-50"
       }`}
     >
@@ -105,8 +107,8 @@ export default function Notifications() {
           </p>
         )}
 
-        {/* ACTION BUTTON */}
-        {notifications?.length > 0 && (
+        {/* CLEAR BUTTON */}
+        {notifications.length > 0 && (
           <button
             onClick={clearAll}
             className="mb-6 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -116,7 +118,7 @@ export default function Notifications() {
         )}
 
         {/* EMPTY STATE */}
-        {(!notifications || notifications.length === 0) && (
+        {notifications.length === 0 && (
           <div className="text-center py-20 text-gray-500">
             No notifications yet.
           </div>
@@ -124,10 +126,10 @@ export default function Notifications() {
 
         {/* LIST */}
         <div className="space-y-4">
-          {notifications?.map((note) => (
+          {notifications.map((note) => (
             <div
               key={note.id}
-              className={`p-4 rounded-xl shadow flex justify-between items-center transition-all ${
+              className={`p-4 rounded-xl shadow flex justify-between items-center ${
                 note.isRead
                   ? settings?.darkMode
                     ? "bg-gray-800"
@@ -139,9 +141,7 @@ export default function Notifications() {
             >
               <div>
                 <p className="font-semibold">{note.title}</p>
-                <p className="text-sm opacity-70">
-                  {note.message}
-                </p>
+                <p className="text-sm opacity-70">{note.message}</p>
 
                 <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded mt-2 inline-block">
                   {note.type}
