@@ -18,7 +18,7 @@ export default function Library() {
   const [savingId, setSavingId] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "" });
 
-  // 🔁 FETCH EVERYTHING
+  /* ================= FETCH ALL ================= */
   useEffect(() => {
     const init = async () => {
       await fetchResources();
@@ -27,7 +27,7 @@ export default function Library() {
     init();
   }, []);
 
-  // 📦 FETCH RESOURCES
+  /* ================= FETCH RESOURCES ================= */
   const fetchResources = async () => {
     try {
       setLoading(true);
@@ -36,12 +36,11 @@ export default function Library() {
 
       const combined = [...defaultResources, ...res.data];
 
-      // ✅ Ensure UNIQUE ID for EVERY resource
       const unique = Array.from(
         new Map(
           combined.map((r, index) => [
-            r.id || r.title || index, // 🔥 fallback ID
-            { ...r, id: r.id || r.title || index },
+            r.id || `${r.title}-${index}`,
+            { ...r, id: r.id || `${r.title}-${index}` },
           ])
         ).values()
       );
@@ -50,10 +49,9 @@ export default function Library() {
     } catch (err) {
       console.error("Failed to fetch resources:", err);
 
-      // fallback with IDs
       const fallback = defaultResources.map((r, i) => ({
         ...r,
-        id: r.id || r.title || i,
+        id: r.id || `${r.title}-${i}`,
       }));
 
       setResources(fallback);
@@ -62,19 +60,19 @@ export default function Library() {
     }
   };
 
-  // 📚 FETCH SAVED COURSES
+  /* ================= FETCH SAVED COURSES ================= */
   const fetchCourses = async () => {
     try {
-      const res = await API.get("/courses",);
-      // 🔥 Map backend → match frontend IDs
-      const ids = res.data.map((c) => c.id); 
+      const res = await API.get("/courses"); // ✅ correct
+
+      const ids = res.data.map((c) => c.id); // ✅ always use id
       setSavedIds(ids);
- } catch (err) {
-      console.error(err);
+    } catch (err) {
+      console.error("Failed to fetch courses:", err);
     }
   };
 
-  // 🔍 FILTER
+  /* ================= FILTER ================= */
   const filtered = resources.filter((res) => {
     return (
       (res.title || "").toLowerCase().includes(search.toLowerCase()) &&
@@ -82,12 +80,12 @@ export default function Library() {
     );
   });
 
-  // 🔥 TRENDING
+  /* ================= TRENDING ================= */
   const trending = resources.slice(0, 6);
 
-  // 🧠 RECOMMENDED
+  /* ================= RECOMMENDED ================= */
   const savedResources = resources.filter((r) =>
-    savedIds.includes(r.title)
+    savedIds.includes(r.id) // ✅ FIXED
   );
 
   const savedCategories = savedResources.map((r) => r.category);
@@ -95,77 +93,70 @@ export default function Library() {
   const recommended = resources.filter(
     (r) =>
       savedCategories.includes(r.category) &&
-      !savedIds.includes(r.title)
+      !savedIds.includes(r.id) // ✅ FIXED
   );
 
-  // 🔔 TOAST
+  /* ================= TOAST ================= */
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast({ message: "", type: "" }), 3000);
   };
 
-  // 💾 SAVE COURSE
+  /* ================= SAVE COURSE ================= */
   const handleSave = async (resource) => {
-  try {
-    setSavingId(resource.id);
+    try {
+      setSavingId(resource.id);
 
-    await API.post(
-  "/courses",
-  {
-    id: resource.id,
-    title: resource.title,
-    category: resource.category || "General",
-    image: resource.img || resource.image,
-    link: resource.link,
-  },
-  {
-    withCredentials: true, // 🔥 ADD THIS
-  }
-);
+      await API.post("/courses", {
+        id: resource.id,
+        title: resource.title,
+        category: resource.category || "General",
+        image: resource.img || resource.image,
+        link: resource.link,
+        progress: 0, 
+        notes: "", 
+      });
 
-    setSavedIds((prev) => [...new Set([...prev, resource.id])]);
+      setSavedIds((prev) => [...new Set([...prev, resource.id])]);
+      
+       window.dispatchEvent(new Event("course-update"));
 
-    showToast("Added to Courses 🎓");
-  } catch (err) {
-    console.error("ERROR:", err.response?.data || err.message);
+      showToast("Added to Courses 🎓");
+    } catch (err) {
+      console.error(err.response?.data || err.message);
 
-    showToast(
-      err.response?.data?.message || "Failed to save course",
-      "error"
-    );
-  } finally {
-    setSavingId(null);
-  }
-};
+      showToast(
+        err.response?.data?.message || "Failed to save course",
+        "error"
+      );
+    } finally {
+      setSavingId(null);
+    }
+  };
 
-  // 🧱 CARD
+  /* ================= CARD ================= */
   const ResourceCard = ({ resource }) => {
     const isSaved = savedIds.includes(resource.id);
 
     return (
       <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
-        <div className="aspect-[16/9] bg-gray-100 flex items-center justify-center">
+        <div className="aspect-[16/9] bg-gray-100">
           <img
             src={resource.img || resource.image}
             alt={resource.title}
             className="object-cover w-full h-full"
-            onError={(e) =>
-              (e.target.src =
-                "/default-course.png")
-            }
+            onError={(e) => (e.target.src = "/default-course.png")}
           />
         </div>
 
-        <div className="p-2 flex flex-col">
-          <h3 className="text-sm font-semibold mb-2">
-            {resource.title}
-          </h3>
+        <div className="p-2">
+          <h3 className="text-sm font-semibold">{resource.title}</h3>
 
-          <span className="text-xs text-gray-400 mb-2">
+          <span className="text-xs text-gray-400">
             {resource.category}
           </span>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-2">
             <button
               onClick={() => handleSave(resource)}
               disabled={isSaved || savingId === resource.id}
@@ -175,7 +166,11 @@ export default function Library() {
                   : "bg-blue-500 text-white"
               }`}
             >
-              {isSaved ? "Saved ✓" : savingId === resource.id ? "Saving..." : "Save"}
+              {isSaved
+                ? "Saved ✓"
+                : savingId === resource.id
+                ? "Saving..."
+                : "Save"}
             </button>
 
             {resource.link && (
@@ -207,30 +202,26 @@ export default function Library() {
       <Navbar />
 
       {/* HEADER */}
-      <div
-        className="p-6 text-center text-white"
-        style={{
+      <div className="p-6 text-center text-white bg-purple-600"
+      style={{
           backgroundImage:
             'url("https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=60")',
-        }}
-      >
-        <h1 className="text-3xl font-bold text-purple-600">
-          Tech Library
-        </h1>
+        }}>
+        <h1 className="text-3xl font-bold">Tech Library</h1>
       </div>
 
       {/* TOAST */}
       {toast.message && (
-        <div className="fixed top-5 right-5 bg-black text-white px-4 py-2 rounded shadow">
+        <div className="fixed top-5 right-5 bg-black text-white px-4 py-2 rounded">
           {toast.message}
         </div>
       )}
 
       {/* TRENDING */}
-      <h2 className="text-xl font-bold px-6 mt-6 mb-2">🔥 Trending</h2>
+      <h2 className="text-xl font-bold px-6 mt-6">🔥 Trending</h2>
       <div className="flex gap-4 overflow-x-auto px-6 pb-4">
-        {trending.map((r, i) => (
-          <div key={i} className="min-w-[200px]">
+        {trending.map((r) => (
+          <div key={r.id} className="min-w-[200px]">
             <ResourceCard resource={r} />
           </div>
         ))}
@@ -239,12 +230,10 @@ export default function Library() {
       {/* RECOMMENDED */}
       {recommended.length > 0 && (
         <>
-          <h2 className="text-xl font-bold px-6 mt-6 mb-2">
-            🎯 Recommended
-          </h2>
+          <h2 className="text-xl font-bold px-6 mt-6">🎯 Recommended</h2>
           <div className="flex gap-4 overflow-x-auto px-6 pb-4">
-            {recommended.map((r, i) => (
-              <div key={i} className="min-w-[200px]">
+            {recommended.map((r) => (
+              <div key={r.id} className="min-w-[200px]">
                 <ResourceCard resource={r} />
               </div>
             ))}
@@ -253,36 +242,35 @@ export default function Library() {
       )}
 
       {/* SEARCH */}
-      <div className="flex flex-col md:flex-row gap-4 mt-6 mb-6 max-w-7xl mx-auto px-6">
+      <div className="flex gap-4 px-6 mt-6">
         <input
           type="text"
-          placeholder="Search resources..."
+          placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border p-3 rounded-xl"
+          className="flex-1 border p-3 rounded"
         />
 
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="border p-3 rounded-xl"
+          className="border p-3 rounded"
         >
-          {categories.map((cat, i) => (
-            <option key={i}>{cat}</option>
+          {categories.map((cat) => (
+            <option key={cat}>{cat}</option>
           ))}
         </select>
       </div>
 
       {/* GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 px-6 max-w-7xl mx-auto">
-        {filtered.map((r, i) => (
-          <ResourceCard key={i} resource={r} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-6 mt-6">
+        {filtered.map((r) => (
+          <ResourceCard key={r.id} resource={r} />
         ))}
       </div>
 
-      {/* EMPTY */}
       {filtered.length === 0 && (
-        <div className="text-center text-gray-500 py-20">
+        <div className="text-center py-20 text-gray-500">
           No resources found.
         </div>
       )}

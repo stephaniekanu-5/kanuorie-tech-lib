@@ -16,9 +16,11 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import TermsOfService from "./pages/TermsOfService.jsx";
+import CookiePolicy from "./pages/CookiePolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import CookieBanner from "./components/CookieBanner";
 function App() {
   const { settings, loadingAuth } = useContext(AuthContext);
 
@@ -34,7 +36,8 @@ function App() {
       }
     >
       <Toaster position="top-right" reverseOrder={false} />
-
+      <CookieBanner />
+      
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Home />} />
@@ -46,7 +49,8 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/termsOfService" element={<TermsOfService />} />
-
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         {/* PROTECTED ROUTES */}
         <Route
           path="/library"

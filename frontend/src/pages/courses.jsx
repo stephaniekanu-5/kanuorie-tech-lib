@@ -8,7 +8,7 @@ export default function Courses() {
   const [activeNoteId, setActiveNoteId] = useState(null);
   const [noteText, setNoteText] = useState("");
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
   // 📥 FETCH COURSES
   const fetchCourses = async () => {
@@ -18,6 +18,7 @@ export default function Courses() {
       setCourses(res.data || []);
     } catch (err) {
       console.error("Fetch course error:", err);
+      setCourses([]);
     } finally {
       setLoading(false);
     }
@@ -26,7 +27,14 @@ export default function Courses() {
   useEffect(() => {
     fetchCourses();
   }, []);
+useEffect(() => {
+  const refresh = () => fetchCourses();
 
+  window.addEventListener("course-update", refresh);
+
+  return () =>
+    window.removeEventListener("course-update", refresh);
+}, []);
   // 🗑 DELETE COURSE
   const handleDelete = async (id) => {
     if (!window.confirm("Remove this course?")) return;
@@ -39,37 +47,38 @@ export default function Courses() {
     }
   };
 
+  // 📊 PROGRESS UPDATE (FIXED SAFETY)
   const updateProgress = async (courseId, newProgress) => {
-  try {
-    const res = await API.put(`/courses/${courseId}/progress`, {
-      progress: newProgress,
-    });
+    try {
+      const res = await API.put(`/courses/${courseId}/progress`, {
+        progress: newProgress,
+      });
 
-    setCourses((prev) =>
-      prev.map((c) =>
-        c.id === courseId
-          ? {
-              ...c,
-              progress: res.data.progress,
-              completed: res.data.completed,
-            }
-          : c
-      )
-    );
-  } catch (err) {
-    const data = err.response?.data;
-
-    if (data?.nextAvailable) {
-      alert(
-        `${data.message}\nNext update: ${new Date(
-          data.nextAvailable
-        ).toLocaleString()}`
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId
+            ? {
+                ...c,
+                progress: res.data?.progress ?? newProgress,
+                completed: res.data?.completed ?? false,
+              }
+            : c
+        )
       );
-    } else {
-      alert(data?.message || "Error updating progress");
+    } catch (err) {
+      const data = err.response?.data;
+
+      if (data?.nextAvailable) {
+        alert(
+          `${data.message}\nNext update: ${new Date(
+            data.nextAvailable
+          ).toLocaleString()}`
+        );
+      } else {
+        alert(data?.message || "Error updating progress");
+      }
     }
-  }
-};
+  };
 
   // 📝 OPEN NOTES
   const openNotes = (course) => {
@@ -85,7 +94,14 @@ export default function Courses() {
       });
 
       setCourses((prev) =>
-        prev.map((c) => (c.id === id ? res.data : c))
+        prev.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                notes: res.data?.notes ?? noteText,
+              }
+            : c
+        )
       );
 
       setActiveNoteId(null);
@@ -94,14 +110,10 @@ export default function Courses() {
     }
   };
 
-  // ⏳ LOADING UI
   if (loading) {
-    return (
-      <div className="text-center py-20">Loading courses...</div>
-    );
+    return <div className="text-center py-20">Loading courses...</div>;
   }
 
-  
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -114,24 +126,25 @@ export default function Courses() {
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {courses.map((course) => {
-              const currentProgress = Math.min(course.Progress.progress || 0, 100);
+              // ✅ FIXED SAFE ACCESS
+              const currentProgress = Math.min(
+                course?.progress || 0,
+                100
+              );
 
               return (
                 <div
                   key={course.id}
                   className="border p-4 rounded-xl shadow bg-white flex flex-col"
                 >
-                  {/* IMAGE */}
                   <img
                     src={
                       course.image ||
                       "https://via.placeholder.com/300x200?text=Course"
                     }
-                    alt={course.title}
                     className="h-40 w-full object-cover rounded mb-3"
                   />
 
-                  {/* TITLE */}
                   <h2 className="font-semibold text-lg">
                     {course.title}
                   </h2>
@@ -140,7 +153,7 @@ export default function Courses() {
                     {course.category || "Uncategorized"}
                   </p>
 
-                  {/* PROGRESS BAR */}
+                  {/* PROGRESS */}
                   <div className="w-full bg-gray-200 h-2 rounded mb-2">
                     <div
                       className="bg-purple-600 h-2 rounded"
@@ -176,20 +189,20 @@ export default function Courses() {
                       </button>
                     )}
 
-                    {/* REMOVE */}
-                  <button
-                    onClick={() => handleDelete(course.id)}
-                    className="text-white text-xs hover:bg-yellow-600 self-end rounded-lg bg-red-500 py-1 px-1 "
-                  >
-                    Remove
-                  </button>
-                  </div>
-                  <button
-                      onClick={() => openNotes(course)}
-                      className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded mt-2"
+                    <button
+                      onClick={() => handleDelete(course.id)}
+                      className="text-white text-xs hover:bg-yellow-600 self-end rounded-lg bg-red-500 py-1 px-1"
                     >
-                      Notes
+                      Remove
                     </button>
+                  </div>
+
+                  <button
+                    onClick={() => openNotes(course)}
+                    className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded mt-2"
+                  >
+                    Notes
+                  </button>
                 </div>
               );
             })}
@@ -209,7 +222,6 @@ export default function Courses() {
                 onChange={(e) => setNoteText(e.target.value)}
                 className="w-full border p-3 rounded mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={5}
-                placeholder="Write your notes here..."
               />
 
               <div className="flex justify-end gap-2">

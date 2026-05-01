@@ -15,12 +15,12 @@ export default function Settings() {
 
   const [status, setStatus] = useState("");
 
-  // ================= LOAD FROM BACKEND =================
+  // ================= SAFE INIT =================
   useEffect(() => {
     if (user?.settings) {
       setSettings(user.settings);
     }
-  }, [user]);
+  }, [user, setSettings]);
 
   // ================= HANDLE CHANGE =================
   const handleChange = (e) => {
@@ -32,7 +32,7 @@ export default function Settings() {
     }));
   };
 
-  // ================= SAVE TO BACKEND =================
+  // ================= SAVE SETTINGS =================
   const handleSave = async () => {
     try {
       const res = await API.put(`/users/${user.id}`, {
@@ -46,12 +46,12 @@ export default function Settings() {
           id: Date.now(),
           title: "Settings Updated ⚙️",
           message: "Your preferences were saved successfully",
-          read: false,
+          isRead: false,
         },
         ...prev,
       ]);
 
-      setStatus("✅ Settings saved to server!");
+      setStatus("✅ Settings saved successfully");
     } catch (err) {
       console.error(err);
       setStatus("❌ Failed to save settings");
@@ -61,26 +61,48 @@ export default function Settings() {
   // ================= CLEAR LOCAL DATA =================
   const handleClearData = () => {
     const confirmClear = window.confirm(
-      "This will clear local storage only. Continue?"
+      "This will clear only local browser data. Continue?"
     );
 
-    if (confirmClear) {
-      localStorage.clear();
-      setStatus("🗑️ Local data cleared");
+    if (!confirmClear) return;
 
-      setSettings({
-        darkMode: false,
-        notifications: true,
-      });
+    localStorage.clear();
 
-      setNotifications([]);
-    }
+    setSettings({
+      darkMode: false,
+      notifications: true,
+    });
+
+    setNotifications([]);
+    setStatus("🗑️ Local data cleared");
+  };
+
+  // ================= COOKIE TOGGLE (IMPROVED) =================
+  const toggleCookies = () => {
+    const current = localStorage.getItem("cookiesAccepted");
+
+    const next = current === "true" ? "false" : "true";
+    localStorage.setItem("cookiesAccepted", next);
+
+    setStatus(
+      next === "true"
+        ? "🍪 Cookies enabled"
+        : "🚫 Cookies disabled"
+    );
+  };
+
+  // ================= SAFE FALLBACK =================
+  const safeSettings = settings || {
+    darkMode: false,
+    notifications: true,
   };
 
   return (
     <div
       className={`min-h-screen transition-all ${
-        settings.darkMode ? "bg-gray-900 text-white" : "bg-gray-50"
+        safeSettings.darkMode
+          ? "bg-gray-900 text-white"
+          : "bg-gray-50"
       }`}
     >
       <Navbar />
@@ -88,18 +110,20 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-8">Settings ⚙️</h1>
 
-        {/* PROFILE SETTINGS */}
+        {/* PROFILE */}
         <div
           className={`p-6 rounded-xl shadow mb-8 ${
-            settings.darkMode ? "bg-gray-800" : "bg-white"
+            safeSettings.darkMode ? "bg-gray-800" : "bg-white"
           }`}
         >
-          <h2 className="text-xl font-semibold mb-4">Profile Settings</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Profile Settings
+          </h2>
 
           <input
             type="text"
             name="name"
-            value={settings.name || ""}
+            value={safeSettings.name || ""}
             onChange={handleChange}
             placeholder="Full Name"
             className="w-full mb-4 px-4 py-3 border rounded-lg text-black"
@@ -108,7 +132,7 @@ export default function Settings() {
           <input
             type="email"
             name="email"
-            value={settings.email || ""}
+            value={safeSettings.email || ""}
             onChange={handleChange}
             placeholder="Email"
             className="w-full px-4 py-3 border rounded-lg text-black"
@@ -118,17 +142,19 @@ export default function Settings() {
         {/* PREFERENCES */}
         <div
           className={`p-6 rounded-xl shadow mb-8 ${
-            settings.darkMode ? "bg-gray-800" : "bg-white"
+            safeSettings.darkMode ? "bg-gray-800" : "bg-white"
           }`}
         >
-          <h2 className="text-xl font-semibold mb-4">Preferences</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Preferences
+          </h2>
 
           <div className="flex justify-between mb-4">
             <span>🌙 Dark Mode</span>
             <input
               type="checkbox"
               name="darkMode"
-              checked={settings.darkMode}
+              checked={safeSettings.darkMode}
               onChange={handleChange}
             />
           </div>
@@ -138,7 +164,7 @@ export default function Settings() {
             <input
               type="checkbox"
               name="notifications"
-              checked={settings.notifications}
+              checked={safeSettings.notifications}
               onChange={handleChange}
             />
           </div>
@@ -147,10 +173,12 @@ export default function Settings() {
         {/* ACTIONS */}
         <div
           className={`p-6 rounded-xl shadow mb-8 ${
-            settings.darkMode ? "bg-gray-800" : "bg-white"
+            safeSettings.darkMode ? "bg-gray-800" : "bg-white"
           }`}
         >
-          <h2 className="text-xl font-semibold mb-4">Actions</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Actions
+          </h2>
 
           <div className="flex flex-col gap-4">
             <button
@@ -166,12 +194,25 @@ export default function Settings() {
             >
               Clear Local Data
             </button>
+
+            <button
+              onClick={toggleCookies}
+              className="bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700"
+            >
+              Toggle Cookie Preferences
+            </button>
           </div>
         </div>
 
+        {/* STATUS */}
         {status && (
           <p className="text-center text-sm">{status}</p>
         )}
+
+        {/* FOOTER */}
+        <footer className="text-center text-gray-500 py-6">
+          © {new Date().getFullYear()} KanuorieTech. All rights reserved.
+        </footer>
       </div>
     </div>
   );

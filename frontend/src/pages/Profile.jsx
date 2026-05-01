@@ -14,6 +14,9 @@ import {
 } from "recharts";
 
 export default function Profile() {
+  const { user, setUser } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [savedCourses, setSavedCourses] = useState([]);
   const [resourcesCount, setResourcesCount] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -22,138 +25,132 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const { user, setUser } = useContext(AuthContext);
-  const navigate = useNavigate();
-
   const avatarInputRef = useRef();
   const coverInputRef = useRef();
+
+  // prevent memory leaks
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // 🔐 Redirect if no user
   useEffect(() => {
     if (!user) navigate("/login");
   }, [user, navigate]);
 
-  // 📦 Fetch data
+  // 📦 FETCH DATA
   useEffect(() => {
-     fetchAll();
-  }, []);
+    if (!user) return;
 
-  const fetchAll = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([fetchCourses(), fetchResources()]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const init = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([fetchCourses(), fetchResources()]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted.current) setLoading(false);
+      }
+    };
+
+    init();
+  }, [user]);
 
   const fetchCourses = async () => {
     try {
       const res = await API.get("/courses");
-      setSavedCourses(res.data || []);
+      if (isMounted.current) setSavedCourses(res.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Courses error:", err);
+      if (isMounted.current) setSavedCourses([]);
     }
   };
 
   const fetchResources = async () => {
-  try {
-    const res = await API.get("/books");
+    try {
+      const res = await API.get("/books");
 
-    const apiResources = res.data || [];
+      const combined = [...defaultResources, ...(res.data || [])];
 
-    // ✅ Merge both
-    const combined = [...defaultResources, ...apiResources];
+      const unique = Array.from(
+        new Map(combined.map((r, i) => [r.id || r.title || i, r])).values()
+      );
 
-    // ✅ Remove duplicates (important!)
-    const unique = Array.from(
-      new Map(combined.map((r) => [r.title, r])).values()
-    );
-
-    setResourcesCount(unique.length);
-  } catch (err) {
-    console.error(err);
-
-    // fallback to default only
-    setResourcesCount(defaultResources.length);
-  }
-};
+      if (isMounted.current) setResourcesCount(unique.length);
+    } catch (err) {
+      console.error(err);
+      if (isMounted.current) setResourcesCount(defaultResources.length);
+    }
+  };
 
   // 📊 STATS
-  const totalCourses = savedCourses.length;
+  const totalCourses = savedCourses?.length || 0;
 
   const completedCourses = savedCourses.filter(
-    (c) => c.progress === 100
+    (c) => c?.progress === 100
   ).length;
 
   const avgProgress =
     totalCourses > 0
       ? Math.round(
           savedCourses.reduce(
-            (acc, c) => acc + (c.progress || 0),
+            (acc, c) => acc + (c?.progress || 0),
             0
           ) / totalCourses
         )
       : 0;
 
-  // 🔥 Safe streak (no crash if column missing)
   const streak = savedCourses.filter((c) => {
     if (!c?.lastProgressUpdate) return false;
+
     const last = new Date(c.lastProgressUpdate);
     const today = new Date();
+
     return (
       last.getDate() === today.getDate() &&
       last.getMonth() === today.getMonth()
     );
   }).length;
 
-  // 📈 CHART DATA
+  // 📈 CHART
   const chartData = savedCourses.map((c, i) => ({
     name: `Course ${i + 1}`,
-    progress: c.progress || 0,
+    progress: c?.progress || 0,
   }));
 
-  // ✏️ HANDLE INPUT
+  // ✏️ INPUT
   const handleChange = (e) => {
     const { name, value } = e.target;
+
     setUser((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // 💾 SAVE PROFILE
+  // 💾 SAVE
   const handleSave = async () => {
     try {
       setUploading(true);
 
       const res = await API.put("/auth/update", user);
 
-      setUser(res.data);
-      setIsEditing(false);
+      if (isMounted.current) {
+        setUser(res.data);
+        setIsEditing(false);
+      }
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error(err?.response?.data || err.message);
     } finally {
-      setUploading(false);
+      if (isMounted.current) setUploading(false);
     }
   };
 
-
-  // 🖱️ DRAG
-  const handleDragOver = (e) => e.preventDefault();
-
-  const handleDrop = (e, type) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    handleUpload(file, type);
-  };
-
-  const handleAvatarUpload = (file) => handleUpload(file, "avatar");
-  const handleCoverUpload = (file) => handleUpload(file, "cover");
-
-  // 📦 UPLOAD
+  // 📦 UPLOAD FIXED
   const handleUpload = async (file, type) => {
     if (!file) return;
 
@@ -166,22 +163,41 @@ export default function Profile() {
 
       const res = await API.post("/upload", formData, {
         onUploadProgress: (e) => {
-          const percent = Math.round((e.loaded * 100) / e.total);
+          const percent = e.total
+            ? Math.round((e.loaded * 100) / e.total)
+            : 0;
+
           setProgress(percent);
         },
       });
 
-      setUser((prev) => ({
-        ...prev,
-        [type]: res.data.imageUrl,
-      }));
+      if (isMounted.current) {
+        setUser((prev) => ({
+          ...prev,
+          [type]: res.data.imageUrl,
+        }));
+      }
     } catch (err) {
       console.error(err);
       alert("Upload failed");
     } finally {
-      setUploading(false);
+      if (isMounted.current) {
+        setUploading(false);
+        setProgress(0);
+      }
     }
   };
+
+  const handleDragOver = (e) => e.preventDefault();
+
+  const handleDrop = (e, type) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleUpload(file, type);
+  };
+
+  const handleAvatarUpload = (file) => handleUpload(file, "avatar");
+  const handleCoverUpload = (file) => handleUpload(file, "cover");
 
   if (loading) {
     return <div className="text-center py-20">Loading...</div>;
