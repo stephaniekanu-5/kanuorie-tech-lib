@@ -52,15 +52,7 @@ function App() {
         <Route path="/cookie-policy" element={<CookiePolicy />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         {/* PROTECTED ROUTES */}
-        <Route
-          path="/library"
-          element={
-            <ProtectedRoute>
-              <Library />
-            </ProtectedRoute>
-          }
-        />
-
+        <Route path="/library" element={<Library />}/>
         <Route
           path="/courses"
           element={
