@@ -466,7 +466,7 @@ export default function CourseDetails() {
                     </p>
 
                     <span className="font-medium">
-                      {formatCourseDuration(course.duration)}
+                      {formatCourseDuration(course.duration) || "8 Weeks"}
                     </span>
                   </div>
                 </div>
@@ -583,7 +583,7 @@ export default function CourseDetails() {
 
                     <Award
                       className="text-yellow-500"
-                      size={32}
+                      size={30}
                     />
                   </div>
 
@@ -598,63 +598,41 @@ export default function CourseDetails() {
 
                   <div className="border-t pt-6">
                     <div className="space-y-4 text-sm">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-500">
-                          Instructor
-                        </span>
-
-                        <strong className="text-right text-slate-900">
-                          {course.instructor || "KanuorieTech"}
-                        </strong>
+                      <div className="flex items-center justify-between">
+                        <span>Instructor</span>
+                        <strong>{course.instructor || "KanuorieTech"}</strong>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Level</span>
+                        <strong>{course.level || "Beginner"}</strong>
                       </div>
 
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-500">
-                          Level
-                        </span>
-
-                        <strong className="text-right text-slate-900">
-                          {course.level || "Beginner"}
-                        </strong>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-500">
+                        <span>
                           Language
                         </span>
-
-                        <strong className="text-right text-slate-900">
+                        <strong>
                           {course.language || "English"}
                         </strong>
                       </div>
 
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-500">
-                          Certificate
-                        </span>
-
-                        <strong className="text-right text-slate-900">
-                          Yes
-                        </strong>
+                      <div className="flex items-center justify-between">
+                        <span>Certificate</span>
+                        <strong>Yes</strong>
                       </div>
 
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-500">
-                          Access
-                        </span>
-
-                        <strong className="text-right text-slate-900">
-                          Lifetime
-                        </strong>
+                      <div className="flex items-center justify-between">
+                        <span>Access</span>
+                        <strong>Lifetime</strong>
                       </div>
 
                       {formattedDate && (
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-slate-500">
+                          <span>
                             Added
                           </span>
 
-                          <strong className="text-right text-slate-900">
+                          <strong>
                             {formattedDate}
                           </strong>
                         </div>
@@ -950,6 +928,7 @@ export default function CourseDetails() {
               </h3>
 
               <p className="mt-4 leading-8 text-slate-600">
+                Experienced software engineer passionate about helping developers build practical skills through project-based learning.
                 Learn practical, real-world development skills
                 through structured lessons, projects, and
                 production-focused workflows.
