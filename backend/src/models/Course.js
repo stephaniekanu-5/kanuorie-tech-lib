@@ -43,6 +43,31 @@ const lessonSchema = new mongoose.Schema(
   }
 );
 
+const moduleSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      default: "",
+    },
+
+    order: {
+      type: Number,
+      default: 0,
+    },
+
+    lessons: [lessonSchema],
+  },
+  {
+    _id: false,
+  }
+);
+
 /* ==========================================
    COURSE SCHEMA
 ========================================== */
@@ -162,13 +187,7 @@ const courseSchema = new mongoose.Schema(
       },
     ],
 
-    lessons: [lessonSchema],
-
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    modules: [moduleSchema],
   },
   {
     timestamps: true,
