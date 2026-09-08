@@ -47,10 +47,10 @@ const userSchema = new mongoose.Schema(
     },
 
     bio: {
-      type:String,
-      trim:true,
-      maxlength:500,
-      default:"",
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: "",
     },
 
     role: {
@@ -84,8 +84,8 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     passwordChangedAt:{
-      type:Date,
-      default:null
+      type: Date,
+      default: null
     },
     lastLogin: {
       type: Date,
@@ -193,7 +193,7 @@ const userSchema = new mongoose.Schema(
     toObject: {
       virtuals: true,
     },
-}
+ }
 );
 userSchema.pre("validate", function (next) {
   if (this.email) {

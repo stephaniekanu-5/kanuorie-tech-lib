@@ -49,7 +49,6 @@ const updateProfile = asyncHandler(async (req, res) => {
     avatar,
     phone,
     bio,
-    settings,
   } = req.body;
 
   if (email?.trim()) {
@@ -524,17 +523,279 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 /* ==========================================
-   EXPORTS
+   CHANGE PASSWORD
 ========================================== */
 
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new ApiError(
+      400,
+      "Current password and new password are required."
+    );
+  }
+
+  if (newPassword.length < 6) {
+    throw new ApiError(
+      400,
+      "New password must be at least 6 characters long."
+    );
+  }
+
+  if (currentPassword === newPassword) {
+    throw new ApiError(
+      400,
+      "New password must be different from your current password."
+    );
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const isCurrentPasswordValid = await user.matchPassword(
+    currentPassword
+  );
+
+  if (!isCurrentPasswordValid) {
+    throw new ApiError(
+      401,
+      "Current password is incorrect."
+    );
+  }
+
+  user.password = newPassword;
+
+  await user.save();
+
+  return ApiResponse.success(
+    res,
+    null,
+    "Password changed successfully."
+  );
+});
+
+/* ==========================================
+   DELETE CURRENT USER ACCOUNT
+========================================== */
+
+const deleteAccount = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  await Promise.all([
+    Book.deleteMany({
+      createdBy: userId,
+    }),
+
+    Course.deleteMany({
+      createdBy: userId,
+    }),
+
+    Progress.deleteMany({
+      user: userId,
+    }),
+
+    Notification.deleteMany({
+      user: userId,
+    }),
+
+    user.deleteOne(),
+  ]);
+
+  return ApiResponse.success(
+    res,
+    null,
+    "Account deleted successfully."
+  );
+});
+
+/* ==========================================
+   GET CURRENT USER SETTINGS
+========================================== */
+
+const getSettings = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .select("settings")
+    .lean();
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  return ApiResponse.success(
+    res,
+    user.settings,
+    "Settings retrieved successfully."
+  );
+});
+
+/* ==========================================
+   UPDATE CURRENT USER SETTINGS
+========================================== */
+
+const updateSettings = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const {
+    theme,
+    language,
+    notifications,
+    emailPreferences,
+    emailNotifications,
+    pushNotifications,
+  } = req.body;
+
+  /* ----------------------------------------
+     THEME
+  ---------------------------------------- */
+
+  if (theme !== undefined) {
+    if (!["light", "dark", "system"].includes(theme)) {
+      throw new ApiError(400, "Invalid theme.");
+    }
+
+    user.settings.theme = theme;
+  }
+
+  /* ----------------------------------------
+     LANGUAGE
+  ---------------------------------------- */
+
+  if (language !== undefined) {
+    if (
+      typeof language !== "string" ||
+      !language.trim()
+    ) {
+      throw new ApiError(
+        400,
+        "Language must be a valid language code."
+      );
+    }
+
+    user.settings.language = language.trim().toLowerCase();
+  }
+
+  /* ----------------------------------------
+     IN-APP NOTIFICATIONS
+  ---------------------------------------- */
+
+  if (notifications !== undefined) {
+    if (
+      typeof notifications !== "object" ||
+      Array.isArray(notifications)
+    ) {
+      throw new ApiError(
+        400,
+        "Invalid notification settings."
+      );
+    }
+
+    const notificationKeys = [
+      "courses",
+      "resources",
+      "products",
+      "account",
+      "promotions",
+    ];
+
+    notificationKeys.forEach((key) => {
+      if (notifications[key] !== undefined) {
+        user.settings.notifications[key] =
+          Boolean(notifications[key]);
+      }
+    });
+  }
+
+  /* ----------------------------------------
+     EMAIL PREFERENCES
+  ---------------------------------------- */
+
+  if (emailPreferences !== undefined) {
+    if (
+      typeof emailPreferences !== "object" ||
+      Array.isArray(emailPreferences)
+    ) {
+      throw new ApiError(
+        400,
+        "Invalid email preferences."
+      );
+    }
+
+    const emailPreferenceKeys = [
+      "security",
+      "courses",
+      "resources",
+      "products",
+      "newsletter",
+      "promotions",
+    ];
+
+    emailPreferenceKeys.forEach((key) => {
+      if (emailPreferences[key] !== undefined) {
+        /*
+         * Security emails cannot be disabled.
+         */
+        if (key === "security") {
+          user.settings.emailPreferences[key] = true;
+        } else {
+          user.settings.emailPreferences[key] =
+            Boolean(emailPreferences[key]);
+        }
+      }
+    });
+  }
+
+  /* ----------------------------------------
+     BACKWARD COMPATIBILITY
+  ---------------------------------------- */
+
+  if (emailNotifications !== undefined) {
+    user.settings.emailNotifications =
+      Boolean(emailNotifications);
+  }
+
+  if (pushNotifications !== undefined) {
+    user.settings.pushNotifications =
+      Boolean(pushNotifications);
+  }
+
+  await user.save();
+
+  return ApiResponse.success(
+    res,
+    user.settings,
+    "Settings updated successfully."
+  );
+});
+
+/* ==========================================
+   EXPORTS
+========================================== */
 module.exports = {
-  getProfile, 
-  updateProfile, 
-  uploadAvatar, 
-  deleteAvatar, 
-  getDashboard, 
-  getUsers, 
-  getUser, 
-  updateUserRole, 
-  deleteUser, 
+  getProfile,
+  updateProfile,
+  uploadAvatar,
+  deleteAvatar,
+  getDashboard,
+  getUsers,
+  getUser,
+  updateUserRole,
+  deleteUser,
+  changePassword,
+  deleteAccount,
+  getSettings,
+  updateSettings,
 };
