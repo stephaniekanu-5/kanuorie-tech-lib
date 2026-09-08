@@ -8,7 +8,7 @@ export const verifyEmail = AuthApi.verifyEmail;
 export const resendVerificationEmail = AuthApi.resendVerificationEmail;
 export const forgotPassword = AuthApi.forgotPassword;
 export const resetPassword = AuthApi.resetPassword;
-export const changePassword = AuthApi.changePassword;
+// export const changePassword = AuthApi.changePassword;
 
 export default {
   login,
@@ -20,5 +20,5 @@ export default {
   resendVerificationEmail,
   forgotPassword,
   resetPassword,
-  changePassword,
+  // changePassword,
 };

@@ -49,10 +49,10 @@ export const resetPassword = async (passwordData) => {
   return data;
 };
 
-export const changePassword = async (passwords) => {
-  const { data } = await API.put("/auth/change-password", passwords);
-  return data;
-};
+// export const changePassword = async (passwords) => {
+//   const { data } = await API.put("/auth/change-password", passwords);
+//   return data;
+// };
 
 export default {
   registerUser,
@@ -64,5 +64,5 @@ export default {
   resendVerificationEmail,
   forgotPassword,
   resetPassword,
-  changePassword,
+  // changePassword,
 };

@@ -76,7 +76,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden ml-30"
+              className="lg:hidden ml-30 bg-gray-100 rounded-lg"
               aria-label="Open menu"
             >
               <Menu size={24} />
